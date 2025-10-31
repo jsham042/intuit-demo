@@ -333,6 +333,23 @@ st.markdown("""
         margin: 0 !important;
         padding: 0 !important;
     }
+    
+    /* Hide markdown containers with only <style> tags */
+    div[data-testid="stMarkdownContainer"]:has(style:only-child) {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Hide element containers that only contain hidden markdown */
+    .element-container:has(> .stMarkdown > div[data-testid="stMarkdownContainer"]:has(br:only-child)),
+    .element-container:has(> .stMarkdown > div[data-testid="stMarkdownContainer"]:has(style:only-child)) {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
 
     /* Intuit brand accent */
     .intuit-brand {
@@ -377,6 +394,39 @@ st.markdown("""
     .stButton > button:active,
     .stFormSubmitButton > button:active {
         background-color: #033152 !important;
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Secondary button styling (Cancel button) */
+    button[kind="secondary"] {
+        background-color: #E0E0E0 !important;
+        color: #424242 !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 12px 24px !important;
+        font-family: 'Nunito Sans', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    button[kind="secondary"] p,
+    button[kind="secondary"] span,
+    button[kind="secondary"] div {
+        color: #424242 !important;
+    }
+    
+    button[kind="secondary"]:hover {
+        background-color: #BDBDBD !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-1px);
+    }
+    
+    button[kind="secondary"]:active {
+        background-color: #9E9E9E !important;
         transform: translateY(0);
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
     }
@@ -499,7 +549,7 @@ st.markdown("""
 
     /* Main content padding - 4px grid */
     .main .block-container {
-        padding-top: 32px;
+        padding-top: 16px;
         padding-bottom: 64px !important;
         padding-left: 40px;
         padding-right: 40px;
@@ -541,9 +591,22 @@ st.markdown("""
 <style>
     .stImage {
         border-radius: 0px !important;
+        margin-bottom: 0px !important;
     }
     .stImage img {
         border-radius: 0px !important;
+    }
+    .element-container:has(.stImage) {
+        margin-bottom: 0px !important;
+    }
+    h1 {
+        margin-top: 4px !important;
+        margin-bottom: 8px !important;
+    }
+    
+    /* Reduce space after heading */
+    .element-container:has(h1) {
+        margin-bottom: 8px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -551,15 +614,9 @@ st.markdown("""
 st.image('intuit-cornerstone-brand-lockup-1-line-color.svg', width=500)
 
 st.markdown("""
-<h1 style='color: #055393; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -0.02em; line-height: 1.2; margin-top: 0px; margin-bottom: 0px;'>
-    AI Specialist Finder
+<h1 style='color: #055393; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -0.02em; line-height: 1.2; margin-top: 4px; margin-bottom: 8px;'>
+    Quick Connect
 </h1>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<div style='color: #39434D; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-size: 18px; line-height: 1.6; margin-bottom: 32px; margin-top: 0px;'>
-    Use AI-powered semantic search to find the best specialist for your customer's needs.
-</div>
 """, unsafe_allow_html=True)
 
 # Initialize the vector database
@@ -569,107 +626,269 @@ except Exception as e:
     st.error(f"Error initializing vector database: {str(e)}")
     st.stop()
 
-# User input with form for proper Enter key handling
-with st.form(key="search_form", clear_on_submit=False):
-    user_query = st.text_area(
-        "Describe the customer's issue or question",
-        placeholder="Example: Customer needs help reconciling their bank account in QuickBooks and is seeing discrepancies...",
-        height=100,
-        key="query_input"
+# Initialize with all specialists if no search has been performed
+if 'search_results' not in st.session_state or not st.session_state['search_results']:
+    # Load all specialists for initial display
+    all_results = []
+    for specialist in SPECIALISTS:
+        all_results.append({
+            'specialist_id': specialist['id'],
+            'name': specialist['name'],
+            'description': specialist['description'],
+            'score': 0.0  # No score for default display
+        })
+    st.session_state['search_results'] = all_results
+
+# Initialize recently called list
+if 'recently_called' not in st.session_state:
+    st.session_state['recently_called'] = []
+
+# Add CSS for mode toggle
+st.markdown("""
+<style>
+    /* Mode toggle styling */
+    div[data-testid="stRadio"][key="mode_toggle"] {
+        margin-bottom: 12px !important;
+    }
+    
+    div[data-testid="stRadio"]:has(input[value="Search"]),
+    div[data-testid="stRadio"]:has(input[value="Search by Name"]),
+    div[data-testid="stRadio"]:has(input[value="Recently Used"]) {
+        border: none !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+        margin-bottom: 12px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Toggle between Search, Search by Name, and Recently Used
+mode = st.radio(
+    "Mode",
+    options=["Search", "Search by Name", "Recently Used"],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="mode_toggle"
+)
+
+# Search box with button side-by-side (like Quick Connects) - only show in Search mode
+if mode == "Search":
+    col1, col2 = st.columns([5, 1])
+
+    with col1:
+        user_query = st.text_input(
+            "search",
+            placeholder="🔍 search...",
+            label_visibility="collapsed",
+            key="search_input"
+        )
+
+    with col2:
+        search_button = st.button("Search", type="primary", use_container_width=True)
+
+    # Perform search
+    if search_button:
+        if not user_query.strip():
+            st.warning("Please enter a description of the customer's issue.")
+        else:
+            with st.spinner("Searching for the best specialist..."):
+                # Search the vector database - get top 20 results
+                results = vector_db.search(
+                    query=user_query,
+                    top_k=20,
+                    score_threshold=0.0  # Get all results, they're already sorted by score
+                )
+
+                if not results:
+                    st.warning("No specialists found. Please try a different query.")
+                else:
+                    # Store results in session state for the dropdown
+                    st.session_state['search_results'] = results
+
+elif mode == "Search by Name":
+    # Name search input - Streamlit reruns on every character change
+    # Note: In Streamlit, text_input triggers a rerun when you press Enter or blur by default
+    # For real-time filtering as you type, the app will update after each character is entered
+    name_search = st.text_input(
+        "search by name",
+        placeholder="🔍 type specialist name...",
+        label_visibility="collapsed",
+        key="name_search_input"
     )
+else:
+    # Recently Used mode
+    st.markdown('<div style="margin-top: 8px;"></div>', unsafe_allow_html=True)
 
-    # Search button
-    search_button = st.form_submit_button("🔍 Find Best Specialist", type="primary")
-
-# Add JavaScript to enable Ctrl/Cmd+Enter to trigger form submission
-st.components.v1.html("""
-<script>
-(function() {
-    const addKeyboardShortcut = () => {
-        const doc = window.parent.document;
-        const textarea = doc.querySelector('textarea[aria-label*="customer"]');
-
-        if (textarea) {
-            textarea.removeEventListener('keydown', handleKeyPress);
-            textarea.addEventListener('keydown', handleKeyPress);
-
-            function handleKeyPress(e) {
-                // Check for Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    // Trigger blur to ensure value is saved
-                    textarea.blur();
-
-                    // Find and click the submit button
-                    setTimeout(() => {
-                        const submitBtn = doc.querySelector('button[kind="primaryFormSubmit"]') ||
-                                         doc.querySelector('form button[kind="primary"]');
-                        if (submitBtn) {
-                            submitBtn.click();
-                        }
-                    }, 50);
-                }
-            }
-        }
-    };
-
-    // Try multiple times to ensure elements are loaded
-    setTimeout(addKeyboardShortcut, 100);
-    setTimeout(addKeyboardShortcut, 500);
-    setTimeout(addKeyboardShortcut, 1000);
-    setTimeout(addKeyboardShortcut, 2000);
-})();
-</script>
-""", height=0)
-
-# Perform search
-if search_button:
-    if not user_query.strip():
-        st.warning("Please enter a description of the customer's issue.")
+# Display results based on mode
+if mode == "Search":
+    # Display search results as a scrollable list
+    if 'search_results' in st.session_state and st.session_state['search_results']:
+        results = st.session_state['search_results']
     else:
-        with st.spinner("Searching for the best specialist..."):
-            # Search the vector database - get top 20 results
-            results = vector_db.search(
-                query=user_query,
-                top_k=20,
-                score_threshold=0.0  # Get all results, they're already sorted by score
-            )
+        results = []
 
-            if not results:
-                st.warning("No specialists found. Please try a different query.")
-            else:
-                # Store results in session state for the dropdown
-                st.session_state['search_results'] = results
+elif mode == "Search by Name":
+    # Filter specialists by name as user types
+    # Build all specialists list
+    all_specialists = []
+    for specialist in SPECIALISTS:
+        all_specialists.append({
+            'specialist_id': specialist['id'],
+            'name': specialist['name'],
+            'description': specialist['description'],
+            'score': 0.0
+        })
+    
+    # Get the search input value
+    name_search_value = st.session_state.get('name_search_input', '')
+    
+    # Filter if search input exists
+    if name_search_value:
+        # Filter specialists whose name contains the search term (case-insensitive)
+        results = [s for s in all_specialists if name_search_value.lower() in s['name'].lower()]
+    else:
+        # Show all specialists if search is empty
+        results = all_specialists
 
-# Display results in dropdown if available
-if 'search_results' in st.session_state and st.session_state['search_results']:
-    results = st.session_state['search_results']
+else:
+    # Display recently called specialists
+    if st.session_state['recently_called']:
+        results = st.session_state['recently_called']
+    else:
+        st.info("No recently called specialists yet.")
+        results = []
 
-    # Create dropdown options from results, ordered by confidence score
-    dropdown_options = {}
-    for i, result in enumerate(results):
-        option_label = f"{result['name']} ({result['specialist_id']})"
-        dropdown_options[option_label] = result
-
-    # Dropdown for selecting specialist
-    st.markdown("<br>", unsafe_allow_html=True)
-    selected_option = st.selectbox(
-        "Select a specialist:",
-        options=list(dropdown_options.keys()),
-        index=0
+# Only show the list if there are results
+if results:
+    
+    # Add custom CSS to style radio buttons like a simple list
+    st.markdown("""
+    <style>
+        /* Hide radio button label */
+        div[data-testid="stRadio"] > label {
+            display: none;
+        }
+        
+        /* Container styling */
+        div[data-testid="stRadio"] {
+            border: 1px solid #D0D0D0;
+            border-radius: 0px;
+            background-color: #ffffff;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 0 !important;
+            margin-top: 8px !important;
+            margin-bottom: 0px !important;
+        }
+        
+        /* Scrollbar styling */
+        div[data-testid="stRadio"]::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        div[data-testid="stRadio"]::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        div[data-testid="stRadio"]::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+        }
+        
+        div[data-testid="stRadio"]::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Radio button container */
+        div[data-testid="stRadio"] > div {
+            gap: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Individual radio items */
+        div[data-testid="stRadio"] label {
+            padding: 14px 16px !important;
+            margin: 0 !important;
+            background-color: transparent !important;
+            cursor: pointer !important;
+            border-radius: 0 !important;
+        }
+        
+        div[data-testid="stRadio"] label:hover {
+            background-color: #f5f5f5 !important;
+        }
+        
+        /* Hide the actual radio circle */
+        div[data-testid="stRadio"] label input[type="radio"] {
+            display: none !important;
+        }
+        
+        /* Hide the custom radio indicator */
+        div[data-testid="stRadio"] label > div:first-child {
+            display: none !important;
+        }
+        
+        /* Text styling */
+        div[data-testid="stRadio"] label p {
+            color: #000000 !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+            font-size: 14px !important;
+            font-weight: 400 !important;
+            margin: 0 !important;
+        }
+        
+        /* Selected item - subtle highlight */
+        div[data-testid="stRadio"] label:has(input[type="radio"]:checked) {
+            background-color: #e8f4f8 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Create specialist options list
+    specialist_options = [f"{s['name']}" for s in results]
+    specialist_dict = {f"{s['name']}": s for s in results}
+    
+    # Display as radio buttons styled like a list
+    if mode == "Search":
+        radio_key = "specialist_radio"
+    elif mode == "Search by Name":
+        radio_key = "name_search_radio"
+    else:
+        radio_key = "recently_used_radio"
+    
+    selected_name = st.radio(
+        "Specialists",
+        options=specialist_options,
+        index=0,
+        key=radio_key,
+        label_visibility="collapsed"
     )
-
+    
     # Get the selected specialist
-    selected_specialist = dropdown_options[selected_option]
-
-    # Display selected specialist description
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(f"**{selected_specialist['name']}** ({selected_specialist['specialist_id']})")
-    st.markdown(f"<div style='background-color: #F7F8F9; padding: 16px; border-radius: 4px; border-left: 4px solid #055393; font-family: \"Nunito Sans\", sans-serif; line-height: 1.6; color: #39434D; margin-top: 8px;'>{selected_specialist['description']}</div>", unsafe_allow_html=True)
-
-    # Action button
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button(f"Route to {selected_specialist['name']}", type="primary"):
-        st.success(f"Routing customer to {selected_specialist['name']} ({selected_specialist['specialist_id']})")
+    if selected_name:
+        st.session_state['selected_specialist'] = specialist_dict[selected_name]
+    
+    # Show action buttons
+    st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        if st.button("Cancel", use_container_width=True, type="secondary"):
+            st.info("Call cancelled")
+    
+    with col2:
+        if st.button("Call", use_container_width=True, type="primary"):
+            if 'selected_specialist' in st.session_state:
+                selected = st.session_state['selected_specialist']
+                
+                # Add to recently called (remove if already exists to avoid duplicates, then add to front)
+                recently_called = st.session_state['recently_called']
+                # Remove if already in the list
+                recently_called = [s for s in recently_called if s['specialist_id'] != selected['specialist_id']]
+                # Add to the front of the list
+                recently_called.insert(0, selected)
+                # Keep only the last 10
+                st.session_state['recently_called'] = recently_called[:10]
+                
+                st.success(f"Calling {selected['name']} ({selected['specialist_id']})")
