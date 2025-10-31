@@ -1,4 +1,6 @@
 import streamlit as st
+from specialists_dictionary import SPECIALISTS
+from vector_db import get_vector_db
 
 # Configure page
 st.set_page_config(
@@ -6,6 +8,12 @@ st.set_page_config(
     page_icon="💙",
     layout="centered"
 )
+
+# Initialize vector database (cached for performance)
+@st.cache_resource
+def init_vector_db():
+    """Initialize and cache the vector database"""
+    return get_vector_db()
 
 # Intuit brand styling
 st.markdown("""
@@ -112,34 +120,118 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header with Intuit branding
-st.title("Intuit Demo")
+st.title("🔍 AI Specialist Finder")
 
-# Create two columns for text input and dropdown
+st.markdown("""
+<div style='color: #393A3D; font-family: "Avenir Next", sans-serif; margin-bottom: 2rem;'>
+Use AI-powered semantic search to find the best specialist for your customer's needs.
+</div>
+""", unsafe_allow_html=True)
+
+# Initialize the vector database
+try:
+    vector_db = init_vector_db()
+    total_specialists = vector_db.get_specialist_count()
+    st.info(f"🔍 Searching across {total_specialists} specialized agents")
+except Exception as e:
+    st.error(f"Error initializing vector database: {str(e)}")
+    st.stop()
+
+# User input
+user_query = st.text_area(
+    "Describe the customer's issue or question",
+    placeholder="Example: Customer needs help reconciling their bank account in QuickBooks and is seeing discrepancies...",
+    height=100
+)
+
+# Search parameters
 col1, col2 = st.columns(2)
-
 with col1:
-    user_input = st.text_input(
-        "Describe customer situation in a few sentences",
-        placeholder="Type here..."
-    )
-
+    num_results = st.slider("Number of results", min_value=1, max_value=10, value=5)
 with col2:
-    category = st.selectbox(
-        "Select Category",
-        options=["QuickBooks", "TurboTax", "Mint", "Credit Karma", "Mailchimp"],
-        index=0
-    )
+    confidence_threshold = st.slider("Minimum confidence %", min_value=0, max_value=100, value=30)
 
-# Enter button
-submit_button = st.button("Enter")
+# Search button
+search_button = st.button("🔍 Find Best Specialist", type="primary")
 
-# Display selection when button is clicked
-if submit_button:
-    st.markdown("<div class='intuit-brand'>", unsafe_allow_html=True)
-    if category and user_input:
-        st.write(f"**Selected:** {category} | **Details:** {user_input}")
-    elif category:
-        st.write(f"**Selected:** {category}")
-    elif user_input:
-        st.write(f"**Details:** {user_input}")
-    st.markdown("</div>", unsafe_allow_html=True)
+# Perform search
+if search_button:
+    if not user_query.strip():
+        st.warning("⚠️ Please enter a description of the customer's issue.")
+    else:
+        with st.spinner("Searching for the best specialist..."):
+            # Search the vector database
+            results = vector_db.search(
+                query=user_query,
+                top_k=num_results,
+                score_threshold=confidence_threshold / 100
+            )
+            
+            if not results:
+                st.warning(f"No specialists found with confidence above {confidence_threshold}%. Try lowering the confidence threshold.")
+            else:
+                st.markdown("<div class='intuit-brand'>", unsafe_allow_html=True)
+                st.success(f"✅ Found {len(results)} matching specialist(s)")
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Display results
+                for i, result in enumerate(results, 1):
+                    # Determine confidence level color
+                    confidence = result['confidence_percentage']
+                    if confidence >= 70:
+                        confidence_color = "#28A745"  # Green
+                        confidence_label = "High Confidence"
+                    elif confidence >= 50:
+                        confidence_color = "#FFC107"  # Yellow
+                        confidence_label = "Medium Confidence"
+                    else:
+                        confidence_color = "#6C757D"  # Gray
+                        confidence_label = "Low Confidence"
+                    
+                    # Create an expander for each result
+                    with st.expander(
+                        f"#{i} - {result['name']} ({result['specialist_id']}) - {confidence:.1f}% match",
+                        expanded=(i == 1)  # Expand the first result by default
+                    ):
+                        # Confidence indicator
+                        st.markdown(f"""
+                        <div style='background-color: {confidence_color}; color: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; font-weight: 600;'>
+                            {confidence_label}: {confidence:.1f}%
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Specialist details
+                        st.markdown(f"**Specialist ID:** `{result['specialist_id']}`")
+                        st.markdown(f"**Name:** {result['name']}")
+                        st.markdown(f"**Description:**")
+                        st.markdown(f"<div style='background-color: #F8F9FA; padding: 1rem; border-radius: 4px; border-left: 4px solid #0077C5;'>{result['description']}</div>", unsafe_allow_html=True)
+                        
+                        # Action button
+                        if st.button(f"Route to {result['name']}", key=f"route_{i}"):
+                            st.success(f"✅ Routing customer to {result['name']} ({result['specialist_id']})")
+
+# Add some spacing
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+# Information section
+with st.expander("ℹ️ How does this work?"):
+    st.markdown("""
+    ### AI-Powered Semantic Search
+    
+    This tool uses advanced natural language processing to match customer inquiries with the most appropriate specialist:
+    
+    1. **Vector Embeddings**: Each specialist's description is converted into a mathematical vector representation using a pre-trained language model
+    2. **Semantic Understanding**: The system understands the meaning and context of queries, not just keywords
+    3. **Similarity Matching**: Qdrant vector database finds specialists whose descriptions are semantically similar to the customer's issue
+    4. **Confidence Scoring**: Results are ranked by relevance with confidence scores
+    
+    **Technology Stack:**
+    - 🗄️ **Qdrant**: High-performance vector database
+    - 🤖 **Sentence Transformers**: State-of-the-art embedding model
+    - 🎯 **Cosine Similarity**: Measures semantic similarity between queries and specialists
+    
+    **Benefits:**
+    - Finds relevant specialists even with different wording
+    - Handles complex, multi-topic queries
+    - Fast search across 90+ specialist types
+    """)
