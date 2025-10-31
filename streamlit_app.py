@@ -626,22 +626,21 @@ except Exception as e:
     st.error(f"Error initializing vector database: {str(e)}")
     st.stop()
 
-# Initialize with all specialists if no search has been performed
-if 'search_results' not in st.session_state or not st.session_state['search_results']:
-    # Load all specialists for initial display
-    all_results = []
-    for specialist in SPECIALISTS:
-        all_results.append({
-            'specialist_id': specialist['id'],
-            'name': specialist['name'],
-            'description': specialist['description'],
-            'score': 0.0  # No score for default display
-        })
-    st.session_state['search_results'] = all_results
+# Initialize search results
+if 'search_results' not in st.session_state:
+    st.session_state['search_results'] = []
+
+# Initialize search performed flag
+if 'search_performed' not in st.session_state:
+    st.session_state['search_performed'] = False
 
 # Initialize recently called list
 if 'recently_called' not in st.session_state:
     st.session_state['recently_called'] = []
+
+# Initialize previous mode to track mode changes
+if 'previous_mode' not in st.session_state:
+    st.session_state['previous_mode'] = None
 
 # Add CSS for mode toggle
 st.markdown("""
@@ -651,8 +650,8 @@ st.markdown("""
         margin-bottom: 12px !important;
     }
     
-    div[data-testid="stRadio"]:has(input[value="Search"]),
-    div[data-testid="stRadio"]:has(input[value="Search by Name"]),
+    div[data-testid="stRadio"]:has(input[value="Relevance"]),
+    div[data-testid="stRadio"]:has(input[value="Intelligent Search"]),
     div[data-testid="stRadio"]:has(input[value="Recently Used"]) {
         border: none !important;
         max-height: none !important;
@@ -662,17 +661,24 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Toggle between Search, Search by Name, and Recently Used
+# Toggle between Relevance, Intelligent Search, and Recently Used
 mode = st.radio(
     "Mode",
-    options=["Search", "Search by Name", "Recently Used"],
+    options=["Relevance", "Intelligent Search", "Recently Used"],
     horizontal=True,
     label_visibility="collapsed",
     key="mode_toggle"
 )
 
-# Search box with button side-by-side (like Quick Connects) - only show in Search mode
-if mode == "Search":
+# Reset search_performed flag when switching to Intelligent Search mode from another mode
+if mode != st.session_state['previous_mode']:
+    if mode == "Intelligent Search":
+        st.session_state['search_performed'] = False
+        st.session_state['search_results'] = []
+    st.session_state['previous_mode'] = mode
+
+# Search box with button side-by-side (like Quick Connects) - only show in Intelligent Search mode
+if mode == "Intelligent Search":
     col1, col2 = st.columns([5, 1])
 
     with col1:
@@ -704,32 +710,38 @@ if mode == "Search":
                 else:
                     # Store results in session state for the dropdown
                     st.session_state['search_results'] = results
+                    st.session_state['search_performed'] = True
 
-elif mode == "Search by Name":
-    # Name search input - Streamlit reruns on every character change
-    # Note: In Streamlit, text_input triggers a rerun when you press Enter or blur by default
-    # For real-time filtering as you type, the app will update after each character is entered
-    name_search = st.text_input(
-        "search by name",
-        placeholder="🔍 type specialist name...",
-        label_visibility="collapsed",
-        key="name_search_input"
-    )
-else:
+elif mode == "Recently Used":
     # Recently Used mode
     st.markdown('<div style="margin-top: 8px;"></div>', unsafe_allow_html=True)
+else:
+    # Relevance mode - search bar for filtering
+    relevance_search = st.text_input(
+        "relevance search",
+        placeholder="🔍 filter specialists...",
+        label_visibility="collapsed",
+        key="relevance_search_input"
+    )
 
 # Display results based on mode
-if mode == "Search":
-    # Display search results as a scrollable list
-    if 'search_results' in st.session_state and st.session_state['search_results']:
+if mode == "Intelligent Search":
+    # Display search results as a scrollable list - only if a search has been performed
+    if st.session_state.get('search_performed', False) and st.session_state['search_results']:
         results = st.session_state['search_results']
     else:
         results = []
 
-elif mode == "Search by Name":
-    # Filter specialists by name as user types
-    # Build all specialists list
+elif mode == "Recently Used":
+    # Display recently called specialists
+    if st.session_state['recently_called']:
+        results = st.session_state['recently_called']
+    else:
+        st.info("No recently called specialists yet.")
+        results = []
+
+else:
+    # Relevance mode - filter specialists based on search input
     all_specialists = []
     for specialist in SPECIALISTS:
         all_specialists.append({
@@ -740,23 +752,17 @@ elif mode == "Search by Name":
         })
     
     # Get the search input value
-    name_search_value = st.session_state.get('name_search_input', '')
+    relevance_search_value = st.session_state.get('relevance_search_input', '')
     
     # Filter if search input exists
-    if name_search_value:
-        # Filter specialists whose name contains the search term (case-insensitive)
-        results = [s for s in all_specialists if name_search_value.lower() in s['name'].lower()]
+    if relevance_search_value:
+        # Filter specialists whose name or description contains the search term (case-insensitive)
+        results = [s for s in all_specialists 
+                  if relevance_search_value.lower() in s['name'].lower() 
+                  or relevance_search_value.lower() in s['description'].lower()]
     else:
         # Show all specialists if search is empty
         results = all_specialists
-
-else:
-    # Display recently called specialists
-    if st.session_state['recently_called']:
-        results = st.session_state['recently_called']
-    else:
-        st.info("No recently called specialists yet.")
-        results = []
 
 # Only show the list if there are results
 if results:
@@ -849,12 +855,12 @@ if results:
     specialist_dict = {f"{s['name']}": s for s in results}
     
     # Display as radio buttons styled like a list
-    if mode == "Search":
+    if mode == "Intelligent Search":
         radio_key = "specialist_radio"
-    elif mode == "Search by Name":
-        radio_key = "name_search_radio"
-    else:
+    elif mode == "Recently Used":
         radio_key = "recently_used_radio"
+    else:
+        radio_key = "relevance_radio"
     
     selected_name = st.radio(
         "Specialists",
