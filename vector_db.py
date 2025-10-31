@@ -49,12 +49,9 @@ class SpecialistVectorDB:
                     distance=Distance.COSINE
                 )
             )
-            print(f"Created collection: {self.collection_name}")
-            
+
             # Embed and index all specialists
             self._index_specialists()
-        else:
-            print(f"Collection {self.collection_name} already exists")
     
     def _create_searchable_text(self, specialist):
         """
@@ -94,7 +91,6 @@ class SpecialistVectorDB:
             collection_name=self.collection_name,
             points=points
         )
-        print(f"Indexed {len(points)} specialists")
     
     def search(self, query, top_k=5, score_threshold=0.3):
         """

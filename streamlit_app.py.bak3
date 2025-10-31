@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from specialists_dictionary import SPECIALISTS
 from vector_db import get_vector_db
 
@@ -65,7 +66,7 @@ st.markdown("""
         font-family: 'Nunito Sans', 'Avenir Next', sans-serif !important;
         font-weight: 700 !important;
         padding-bottom: 16px;
-        font-size: 40px !important;
+        font-size: 28px !important;
         letter-spacing: -0.02em;
         line-height: 1.2;
     }
@@ -168,7 +169,7 @@ st.markdown("""
         color: #0D333F !important;
         background-color: #ffffff !important;
         font-family: 'Nunito Sans', sans-serif !important;
-        padding: 12px 16px !important;
+        padding: 8px 12px !important;
     }
 
     /* Dropdown option items - all child elements */
@@ -215,7 +216,7 @@ st.markdown("""
     .stSelectbox select option {
         background-color: #ffffff !important;
         color: #0D333F !important;
-        padding: 12px 16px !important;
+        padding: 8px 12px !important;
     }
 
     .stSelectbox > div > div:hover {
@@ -266,26 +267,6 @@ st.markdown("""
         outline: none !important;
     }
 
-    /* Remove red validation borders */
-    .stTextInput > div > div > input:invalid,
-    .stTextArea > div > div > textarea:invalid,
-    .stTextInput > div > div > input[aria-invalid="true"],
-    .stTextArea > div > div > textarea[aria-invalid="true"] {
-        border-color: var(--intuit-border) !important;
-        box-shadow: none !important;
-    }
-
-    .stTextInput div[data-baseweb="base-input"],
-    .stTextArea div[data-baseweb="base-input"] {
-        border-color: var(--intuit-border) !important;
-    }
-
-    .stTextInput div[data-baseweb="base-input"]:focus-within,
-    .stTextArea div[data-baseweb="base-input"]:focus-within {
-        border-color: var(--intuit-bright-blue) !important;
-        box-shadow: 0 0 0 3px rgba(5, 83, 147, 0.1) !important;
-    }
-
     /* Slider styling */
     .stSlider label {
         color: var(--intuit-dark-navy) !important;
@@ -310,28 +291,7 @@ st.markdown("""
     /* Container styling */
     .element-container {
         font-family: 'Nunito Sans', sans-serif !important;
-        margin-bottom: 16px;
-    }
-
-    /* Hide empty iframes (like the JavaScript keyboard shortcut) */
-    .stIFrame[height="0px"],
-    iframe[height="0"],
-    .element-container[height="0px"],
-    div[data-testid="stElementContainer"][height="0px"],
-    .element-container:has(.stIFrame),
-    .element-container:has(iframe[title="st.iframe"]) {
-        display: none !important;
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Hide markdown containers with only <br> tags */
-    div[data-testid="stMarkdownContainer"]:has(br:only-child) {
-        display: none !important;
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        margin-bottom: 8px;
     }
 
     /* Intuit brand accent */
@@ -342,43 +302,37 @@ st.markdown("""
     }
 
     /* Button styling - Intuit Primary Button */
-    .stButton > button,
-    .stFormSubmitButton > button {
-        background-color: var(--intuit-bright-blue) !important;
+    .stButton > button {
+        background-color: var(--intuit-bright-blue);
         color: #ffffff !important;
-        border: none !important;
-        border-radius: 4px !important;
-        padding: 12px 24px !important;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 24px;
         font-family: 'Nunito Sans', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
+        font-weight: 600;
+        font-size: 16px;
         cursor: pointer;
         transition: all 0.2s ease;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     /* Ensure button text is always white */
     .stButton > button p,
     .stButton > button span,
-    .stButton > button div,
-    .stFormSubmitButton > button p,
-    .stFormSubmitButton > button span,
-    .stFormSubmitButton > button div {
+    .stButton > button div {
         color: #ffffff !important;
     }
 
-    .stButton > button:hover,
-    .stFormSubmitButton > button:hover {
-        background-color: #044170 !important;
-        box-shadow: 0 4px 8px rgba(5, 83, 147, 0.2) !important;
+    .stButton > button:hover {
+        background-color: #044170;
+        box-shadow: 0 4px 8px rgba(5, 83, 147, 0.2);
         transform: translateY(-1px);
     }
 
-    .stButton > button:active,
-    .stFormSubmitButton > button:active {
-        background-color: #033152 !important;
+    .stButton > button:active {
+        background-color: #033152;
         transform: translateY(0);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     /* Info/Warning/Success boxes */
@@ -386,7 +340,7 @@ st.markdown("""
         font-family: 'Nunito Sans', sans-serif !important;
         border-radius: 4px !important;
         border-left-width: 4px !important;
-        padding: 16px !important;
+        padding: 12px !important;
     }
 
     .stAlert p, .stAlert div, .stAlert span {
@@ -408,7 +362,7 @@ st.markdown("""
         color: var(--intuit-dark-navy) !important;
         background-color: var(--intuit-bg-light) !important;
         border-radius: 4px !important;
-        padding: 12px 16px !important;
+        padding: 8px 12px !important;
     }
 
     .streamlit-expanderHeader p {
@@ -494,17 +448,17 @@ st.markdown("""
         z-index: 10 !important;
         clear: both !important;
         margin-top: 16px !important;
-        margin-bottom: 32px !important;
+        margin-bottom: 8px !important;
     }
 
     /* Main content padding - 4px grid */
     .main .block-container {
-        padding-top: 32px;
-        padding-bottom: 64px !important;
+        padding-top: 16px;
+        padding-bottom: 16px !important;
         padding-left: 40px;
         padding-right: 40px;
         max-width: 1200px;
-        min-height: 100vh;
+        
         position: relative !important;
     }
 
@@ -548,16 +502,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.image('intuit-cornerstone-brand-lockup-1-line-color.svg', width=500)
+st.image('intuit-cornerstone-brand-lockup-1-line-color.svg', width=250)
 
 st.markdown("""
-<h1 style='color: #055393; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -0.02em; line-height: 1.2; margin-top: 0px; margin-bottom: 0px;'>
+<h1 style='color: #055393; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -0.02em; line-height: 1.2; margin-top: 8px; margin-bottom: 8px;'>
     AI Specialist Finder
 </h1>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div style='color: #39434D; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-size: 18px; line-height: 1.6; margin-bottom: 32px; margin-top: 0px;'>
+<div style='color: #39434D; font-family: "Nunito Sans", "Avenir Next", sans-serif; font-size: 16px; line-height: 1.6; margin-bottom: 8px;'>
     Use AI-powered semantic search to find the best specialist for your customer's needs.
 </div>
 """, unsafe_allow_html=True)
@@ -569,60 +523,55 @@ except Exception as e:
     st.error(f"Error initializing vector database: {str(e)}")
     st.stop()
 
-# User input with form for proper Enter key handling
-with st.form(key="search_form", clear_on_submit=False):
-    user_query = st.text_area(
-        "Describe the customer's issue or question",
-        placeholder="Example: Customer needs help reconciling their bank account in QuickBooks and is seeing discrepancies...",
-        height=100,
-        key="query_input"
-    )
+# User input
+user_query = st.text_area(
+    "Describe the customer's issue or question",
+    placeholder="Example: Customer needs help reconciling their bank account in QuickBooks and is seeing discrepancies...",
+    height=100,
+    key="user_query_input"
+)
 
-    # Search button
-    search_button = st.form_submit_button("🔍 Find Best Specialist", type="primary")
+# Initialize session state for keyboard trigger
+if 'trigger_search' not in st.session_state:
+    st.session_state.trigger_search = False
 
-# Add JavaScript to enable Ctrl/Cmd+Enter to trigger form submission
-st.components.v1.html("""
+# Add JavaScript to enable Ctrl/Cmd+Enter to trigger search
+components.html("""
 <script>
-(function() {
-    const addKeyboardShortcut = () => {
-        const doc = window.parent.document;
-        const textarea = doc.querySelector('textarea[aria-label*="customer"]');
-
-        if (textarea) {
-            textarea.removeEventListener('keydown', handleKeyPress);
-            textarea.addEventListener('keydown', handleKeyPress);
-
-            function handleKeyPress(e) {
+    const doc = window.parent.document;
+    
+    // Function to add keyboard listener
+    function addKeyboardListener() {
+        const textarea = doc.querySelector('textarea[aria-label="Describe the customer\'s issue or question"]');
+        
+        if (textarea && !textarea.dataset.listenerAdded) {
+            textarea.dataset.listenerAdded = 'true';
+            
+            textarea.addEventListener('keydown', function(e) {
                 // Check for Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
-                    e.stopPropagation();
-
-                    // Trigger blur to ensure value is saved
-                    textarea.blur();
-
-                    // Find and click the submit button
-                    setTimeout(() => {
-                        const submitBtn = doc.querySelector('button[kind="primaryFormSubmit"]') ||
-                                         doc.querySelector('form button[kind="primary"]');
-                        if (submitBtn) {
-                            submitBtn.click();
-                        }
-                    }, 50);
+                    
+                    // Find and click the search button
+                    const buttons = doc.querySelectorAll('button[kind="primary"]');
+                    if (buttons.length > 0) {
+                        buttons[0].click();
+                    }
                 }
-            }
+            });
         }
-    };
-
-    // Try multiple times to ensure elements are loaded
-    setTimeout(addKeyboardShortcut, 100);
-    setTimeout(addKeyboardShortcut, 500);
-    setTimeout(addKeyboardShortcut, 1000);
-    setTimeout(addKeyboardShortcut, 2000);
-})();
+    }
+    
+    // Try multiple times to attach the listener
+    addKeyboardListener();
+    setTimeout(addKeyboardListener, 100);
+    setTimeout(addKeyboardListener, 500);
+    setTimeout(addKeyboardListener, 1000);
 </script>
 """, height=0)
+
+# Search button
+search_button = st.button("🔍 Find Best Specialist", type="primary")
 
 # Perform search
 if search_button:
@@ -667,7 +616,7 @@ if 'search_results' in st.session_state and st.session_state['search_results']:
     # Display selected specialist description
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"**{selected_specialist['name']}** ({selected_specialist['specialist_id']})")
-    st.markdown(f"<div style='background-color: #F7F8F9; padding: 16px; border-radius: 4px; border-left: 4px solid #055393; font-family: \"Nunito Sans\", sans-serif; line-height: 1.6; color: #39434D; margin-top: 8px;'>{selected_specialist['description']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: #F7F8F9; padding: 12px; border-radius: 4px; border-left: 4px solid #055393; font-family: \"Nunito Sans\", sans-serif; line-height: 1.6; color: #39434D; margin-top: 8px;'>{selected_specialist['description']}</div>", unsafe_allow_html=True)
 
     # Action button
     st.markdown("<br>", unsafe_allow_html=True)
